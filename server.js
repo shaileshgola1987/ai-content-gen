@@ -19,8 +19,8 @@ const CONFIG = {
   // Open-source model endpoints — swap to your preferred provider
   providers: {
     ollama: {
-      baseUrl: process.env.OLLAMA_URL || "http://localhost:11434",
-      model: process.env.OLLAMA_MODEL || "llama3",
+      baseUrl: process.env.OLLAMA_URL || "http://103.174.102.194:11434",
+      model: process.env.OLLAMA_MODEL || "phi3:mini",
     },
     huggingface: {
       baseUrl: "https://api-inference.huggingface.co/models",
@@ -194,7 +194,7 @@ async function callOpenRouter(prompt, config) {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${config.apiKey}`,
-      "HTTP-Referer": "http://localhost:3000",
+      "HTTP-Referer": "http://103.174.102.194:3000",
       "X-Title": "AI Content Generator",
     },
     body: JSON.stringify({
