@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Content Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+<style>
+/* ── Variables ── */
+:root {
+  --bg: #f5f7fa;
+  --surface: #fff;
+  --surface2: #fff;
+  --border: #000;
+  --border-hover: rgba(130,100,255,0.4);
+  --accent: #7c5cfc;
+  --accent2: #00d4aa;
+  --accent3: #ff6b6b;
+  --text: #000;
+  --text-muted: #6e6b82;
+  --text-dim: #000;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+  --glow: 0 0 40px rgba(124,92,252,0.15);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Background mesh ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(124,92,252,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 80%, rgba(0,212,170,0.08) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Layout ── */
+.app { position: relative; z-index: 1; display: flex; min-height: 100vh; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  padding: 28px 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.logo-icon {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+
+.logo-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.sidebar-section {
+  padding: 16px 12px 8px;
+}
+
+.sidebar-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 8px;
+  margin-bottom: 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-dim);
+  font-size: 13.5px;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.nav-item:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+}
+
+.nav-item.active {
+  background: rgba(124,92,252,0.15);
+  border-color: rgba(124,92,252,0.3);
+  color: var(--text);
+}
+
+.nav-item .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+.nav-item .nav-badge {
+  margin-left: auto;
+  font-size: 10px;
+  background: rgba(124,92,252,0.3);
+  color: #b9a4ff;
+  padding: 1px 6px;
+  border-radius: 20px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.provider-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.provider-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent2);
+  box-shadow: 0 0 6px var(--accent2);
+  flex-shrink: 0;
+}
+
+.provider-name { color: var(--text-dim); }
+.provider-name span { color: var(--text); font-weight: 500; }
+
+/* ── Main ── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* ── Topbar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar-left { display: flex; flex-direction: column; }
+.topbar-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.3px;
+}
+.topbar-desc { font-size: 12px; color: var(--text-muted); }
+
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.provider-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background:#fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
+.provider-select-wrap label { color: var(--text-muted); font-size: 12px; }
+
+select {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  padding-right: 16px;
+}
+
+option { background: #fff; }
+
+/* ── Content area ── */
+.content { flex: 1; padding: 28px; }
+
+/* ── Content type tabs ── */
+.type-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.type-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.type-tab:hover { border-color: var(--border-hover); color: var(--text); }
+.type-tab.active {
+  background: rgba(124,92,252,0.18);
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.type-tab .tab-icon { font-size: 14px; }
+
+/* ── Two-column layout ── */
+.gen-layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── Form card ── */
+.form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.form-card-title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-card-title .card-icon {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, rgba(124,92,252,0.3), rgba(0,212,170,0.3));
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.field-group { margin-bottom: 16px; }
+
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  letter-spacing: 0.3px;
+}
+
+.field-label span {
+  color: var(--accent3);
+  margin-left: 2px;
+}
+
+.field-input, .field-textarea, .field-select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 10px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  resize: vertical;
+}
+
+.field-input:focus, .field-textarea:focus, .field-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124,92,252,0.12);
+}
+
+.field-input::placeholder, .field-textarea::placeholder { color: var(--text-muted); }
+.field-textarea { min-height: 80px; line-height: 1.5; }
+
+.tone-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.tone-pill {
+  padding: 7px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.tone-pill:hover { border-color: var(--border-hover); color: var(--text); }
+.tone-pill.selected {
+  background: rgba(124,92,252,0.2);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.generate-btn {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, var(--accent), #5a3fd6);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 0.25s;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.generate-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(255,255,255,0.08));
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.generate-btn:hover:not(:disabled)::before { opacity: 1; }
+.generate-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,92,252,0.4); }
+.generate-btn:active:not(:disabled) { transform: translateY(0); }
+.generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: none;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Output card ── */
+.output-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  min-height: 400px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.output-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.output-actions { display: flex; gap: 8px; }
+
+.action-btn {
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.action-btn:hover { border-color: var(--border-hover); color: var(--text); }
+.action-btn.success { border-color: var(--accent2); color: var(--accent2); }
+
+.output-body { flex: 1; padding: 24px; overflow-y: auto; }
+
+/* ── Placeholder ── */
+.output-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  text-align: center;
+  color: var(--text-muted);
+  gap: 12px;
+}
+
+.placeholder-icon {
+  font-size: 42px;
+  opacity: 0.3;
+}
+
+.placeholder-text { font-size: 14px; max-width: 260px; line-height: 1.5; }
+
+/* ── Generated content ── */
+.gen-text {
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--text);
+  white-space: pre-wrap;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── SEO JSON output ── */
+.seo-grid {
+  display: grid;
+  gap: 14px;
+  animation: fadeIn 0.4s ease;
+}
+
+.seo-field {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.seo-field-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.seo-field-value {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.seo-field.highlight { border-color: rgba(124,92,252,0.3); }
+.seo-field.highlight .seo-field-label { color: #b9a4ff; }
+
+.seo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.seo-chip {
+  font-size: 12px;
+  background: rgba(124,92,252,0.15);
+  color: #b9a4ff;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(124,92,252,0.2);
+}
+
+/* ── Stats bar ── */
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.stat-item {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.stat-item strong { color: var(--text-dim); }
+
+/* ── History ── */
+.history-panel {
+  display: none;
+}
+
+.history-panel.active {
+  display: block;
+}
+
+.history-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.history-item:hover { border-color: var(--border-hover); }
+
+.history-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.history-type {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--accent);
+}
+
+.history-time { font-size: 11px; color: var(--text-muted); }
+.history-preview { font-size: 13px; color: var(--text-dim); line-height: 1.4; }
+
+/* ── Loading animation ── */
+.loading-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 200px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: bounce 1.2s infinite ease-in-out;
+}
+
+.dot:nth-child(2) { animation-delay: 0.2s; background: var(--accent2); }
+.dot:nth-child(3) { animation-delay: 0.4s; background: #ff6b9d; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 100;
+  transform: translateY(60px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+.toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.toast.success { border-color: rgba(0,212,170,0.4); }
+.toast.error { border-color: rgba(255,107,107,0.4); }
+
+/* ── Char counter ── */
+.field-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.char-count { font-size: 10px; color: var(--text-muted); }
+.char-count.warn { color: var(--accent3); }
+
+/* ── Responsive ── */
+@media (max-width: 1000px) {
+  .gen-layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+}
+
+@media (max-width: 600px) {
+  .content { padding: 16px; }
+  .topbar { padding: 12px 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">✦</div>
+        <div class="logo-text">ShaileshAI</div>
+      </div>
+      <div class="logo-sub">Open-Source AI • Content Studio</div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Generator</div>
+      <div class="nav-item active" onclick="showPanel('generate')">
+        <span class="nav-icon">⚡</span> Generate Content
+      </div>
+      <div class="nav-item" onclick="showPanel('history')">
+        <span class="nav-icon">🕐</span> History
+        <span class="nav-badge" id="historyCount">0</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Content Types</div>
+      <div class="nav-item" onclick="selectType('about_us')">
+        <span class="nav-icon">🏢</span> About Us
+      </div>
+      <div class="nav-item" onclick="selectType('product_description')">
+        <span class="nav-icon">🛍️</span> Product Description
+      </div>
+      <div class="nav-item" onclick="selectType('product_specification')">
+        <span class="nav-icon">📋</span> Product Spec
+      </div>
+      <div class="nav-item" onclick="selectType('technical_specification')">
+        <span class="nav-icon">⚙️</span> Technical Spec
+      </div>
+      <div class="nav-item" onclick="selectType('seo_meta')">
+        <span class="nav-icon">🔍</span> SEO Meta
+      </div>
+      <div class="nav-item" onclick="selectType('blog_intro')">
+        <span class="nav-icon">✍️</span> Blog Intro
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="provider-badge">
+        <div class="provider-dot"></div>
+        <div class="provider-name">Provider: <span id="currentProviderBadge">—</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title" id="topbarTitle">AI Content Generator</div>
+        <div class="topbar-desc" id="topbarDesc">Select a content type and fill in the details below</div>
+      </div>
+      <div class="topbar-right">
+        <div class="provider-select-wrap">
+          <label>Provider</label>
+          <select id="providerSelect" onchange="updateProvider(this.value)">
+            <option value="openrouter">OpenRouter (Free)</option>
+            <option value="ollama">Ollama (Local)</option>
+            <option value="huggingface">HuggingFace</option>
+            <option value="anthropic">Anthropic Claude</option>
+          </select>
+          <span style="color:var(--text-muted);font-size:11px;pointer-events:none">▾</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Generate Panel -->
+      <div id="panel-generate">
+        <!-- Content Type Tabs -->
+        <div class="type-tabs">
+          <div class="type-tab active" data-type="about_us" onclick="selectType('about_us')">
+            <span class="tab-icon">🏢</span> About Us
+          </div>
+          <div class="type-tab" data-type="product_description" onclick="selectType('product_description')">
+            <span class="tab-icon">🛍️</span> Product Desc
+          </div>
+          <div class="type-tab" data-type="product_specification" onclick="selectType('product_specification')">
+            <span class="tab-icon">📋</span> Product Spec
+          </div>
+          <div class="type-tab" data-type="technical_specification" onclick="selectType('technical_specification')">
+            <span class="tab-icon">⚙️</span> Technical Spec
+          </div>
+          <div class="type-tab" data-type="seo_meta" onclick="selectType('seo_meta')">
+            <span class="tab-icon">🔍</span> SEO Meta
+          </div>
+          <div class="type-tab" data-type="blog_intro" onclick="selectType('blog_intro')">
+            <span class="tab-icon">✍️</span> Blog Intro
+          </div>
+        </div>
+
+        <!-- Generator Layout -->
+        <div class="gen-layout">
+          <!-- Dynamic Form -->
+          <div class="form-card">
+            <div class="form-card-title">
+              <div class="card-icon" id="formIcon">🏢</div>
+              <span id="formTitle">About Us Generator</span>
+            </div>
+            <div id="dynamicForm"></div>
+            <button class="generate-btn" id="genBtn" onclick="generate()">
+              <div class="btn-spinner" id="btnSpinner"></div>
+              <span id="btnText">✦ Generate Content</span>
+            </button>
+          </div>
+
+          <!-- Output -->
+          <div class="output-card">
+            <div class="output-header">
+              <div class="output-title">
+                <span>⬡</span>
+                <span id="outputTitle">Output</span>
+              </div>
+              <div class="output-actions">
+                <button class="action-btn" id="copyBtn" onclick="copyContent()" style="display:none">
+                  📋 Copy
+                </button>
+                <button class="action-btn" onclick="downloadContent()" id="dlBtn" style="display:none">
+                  ⬇ Download
+                </button>
+              </div>
+            </div>
+            <div class="output-body" id="outputBody">
+              <div class="output-placeholder">
+                <div class="placeholder-icon">✦</div>
+                <div class="placeholder-text">Fill in the form and click Generate to create AI-powered content</div>
+              </div>
+            </div>
+            <div class="stats-bar" id="statsBar" style="display:none">
+              <div class="stat-item"><strong>Words:</strong> <span id="statWords">—</span></div>
+              <div class="stat-item"><strong>Chars:</strong> <span id="statChars">—</span></div>
+              <div class="stat-item"><strong>Provider:</strong> <span id="statProvider">—</span></div>
+              <div class="stat-item"><strong>Time:</strong> <span id="statTime">—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Panel -->
+      <div id="panel-history" style="display:none">
+        <div style="margin-bottom:20px">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:4px">Generation History</div>
+          <div style="font-size:13px;color:var(--text-muted)">Your recent content generations this session</div>
+        </div>
+        <div id="historyList">
+          <div style="text-align:center;color:var(--text-muted);padding:60px 0;font-size:14px">
+            No history yet. Generate some content first!
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="toastIcon">✓</span>
+  <span id="toastMsg">Copied!</span>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+const state = {
+  currentType: 'about_us',
+  currentProvider: 'openrouter',
+  currentResult: null,
+  history: [],
+  generating: false,
+};
+
+// ── Form Definitions ───────────────────────────────────────────────────────────
+const FORMS = {
+  about_us: {
+    icon: '🏢', title: 'About Us Generator',
+    topTitle: 'About Us', topDesc: 'Generate a compelling company story and mission',
+    fields: [
+      { id: 'company', label: 'Company Name', type: 'input', placeholder: 'e.g. Acme Technologies', required: true },
+      { id: 'industry', label: 'Industry / Niche', type: 'input', placeholder: 'e.g. SaaS, E-commerce, Healthcare' },
+      { id: 'keywords', label: 'Brand Keywords', type: 'input', placeholder: 'e.g. innovation, trust, customer-first' },
+      { id: 'tone', label: 'Tone of Voice', type: 'tone' },
+    ]
+  },
+  product_description: {
+    icon: '🛍️', title: 'Product Description',
+    topTitle: 'Product Description', topDesc: 'Create persuasive, benefit-led product copy',
+    fields: [
+      { id: 'product', label: 'Product Name', type: 'input', placeholder: 'e.g. UltraFit Pro Earbuds', required: true },
+      { id: 'features', label: 'Key Features', type: 'textarea', placeholder: 'List the main features and benefits...' },
+      { id: 'audience', label: 'Target Audience', type: 'input', placeholder: 'e.g. Fitness enthusiasts, professionals' },
+      { id: 'tone', label: 'Tone of Voice', type: 'tone' },
+    ]
+  },
+  product_specification: {
+    icon: '📋', title: 'Product Specification',
+    topTitle: 'Product Specification', topDesc: 'Generate detailed product spec sheets',
+    fields: [
+      { id: 'product', label: 'Product Name', type: 'input', placeholder: 'e.g. SmartHome Hub X200', required: true },
+      { id: 'category', label: 'Product Category', type: 'input', placeholder: 'e.g. Consumer Electronics, Furniture' },
+      { id: 'features', label: 'Features & Details', type: 'textarea', placeholder: 'List dimensions, materials, specs, colors...' },
+    ]
+  },
+  technical_specification: {
+    icon: '⚙️', title: 'Technical Specification',
+    topTitle: 'Technical Specification', topDesc: 'Create detailed technical documentation',
+    fields: [
+      { id: 'product', label: 'Product / System Name', type: 'input', placeholder: 'e.g. PayFlow API v3', required: true },
+      { id: 'techStack', label: 'Technology Stack', type: 'input', placeholder: 'e.g. Node.js, PostgreSQL, Redis, AWS' },
+      { id: 'platform', label: 'Platform / OS', type: 'input', placeholder: 'e.g. Linux, Windows, Cross-platform' },
+      { id: 'details', label: 'Additional Details', type: 'textarea', placeholder: 'Performance requirements, security needs, integrations...' },
+    ]
+  },
+  seo_meta: {
+    icon: '🔍', title: 'SEO Meta Generator',
+    topTitle: 'SEO Meta Content', topDesc: 'Generate optimised titles, descriptions & schema',
+    fields: [
+      { id: 'business', label: 'Business / Product Name', type: 'input', placeholder: 'e.g. TechStore India', required: true },
+      { id: 'page', label: 'Page Type', type: 'select', options: ['Homepage','Product Page','Category Page','Blog Post','About Us','Contact','Landing Page','Service Page'] },
+      { id: 'keywords', label: 'Focus Keywords', type: 'input', placeholder: 'e.g. buy laptops online, best laptop deals' },
+      { id: 'description', label: 'Page Description', type: 'textarea', placeholder: 'What is this page about? What does it offer?' },
+    ]
+  },
+  blog_intro: {
+    icon: '✍️', title: 'Blog Introduction',
+    topTitle: 'Blog Introduction', topDesc: 'Hook readers from the very first paragraph',
+    fields: [
+      { id: 'topic', label: 'Blog Topic', type: 'input', placeholder: 'e.g. How to scale a startup in 2025', required: true },
+      { id: 'audience', label: 'Target Audience', type: 'input', placeholder: 'e.g. Startup founders, marketers' },
+      { id: 'keywords', label: 'SEO Keywords', type: 'input', placeholder: 'e.g. startup growth, scale business' },
+      { id: 'tone', label: 'Tone of Voice', type: 'tone' },
+    ]
+  },
+};
+
+const TONES = ['Professional', 'Friendly', 'Persuasive', 'Informative', 'Playful', 'Authoritative'];
+let selectedTone = 'Professional';
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    state.currentProvider = cfg.defaultProvider;
+    document.getElementById('providerSelect').value = cfg.defaultProvider;
+    document.getElementById('currentProviderBadge').textContent = cfg.defaultProvider;
+  } catch {}
+  renderForm('about_us');
+}
+
+// ── Panel navigation ───────────────────────────────────────────────────────────
+function showPanel(name) {
+  ['generate','history'].forEach(p => {
+    document.getElementById(`panel-${p}`).style.display = p === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event?.currentTarget?.classList.add('active');
+}
+
+// ── Content type selection ─────────────────────────────────────────────────────
+function selectType(type) {
+  state.currentType = type;
+  document.querySelectorAll('.type-tab').forEach(t => t.classList.toggle('active', t.dataset.type === type));
+  renderForm(type);
+  resetOutput();
+}
+
+// ── Form rendering ─────────────────────────────────────────────────────────────
+function renderForm(type) {
+  const def = FORMS[type];
+  document.getElementById('formIcon').textContent = def.icon;
+  document.getElementById('formTitle').textContent = def.title;
+  document.getElementById('topbarTitle').textContent = def.topTitle;
+  document.getElementById('topbarDesc').textContent = def.topDesc;
+  document.getElementById('outputTitle').textContent = def.topTitle + ' Output';
+
+  const form = document.getElementById('dynamicForm');
+  form.innerHTML = def.fields.map(f => renderField(f)).join('');
+
+  // Restore tone
+  document.querySelectorAll('.tone-pill').forEach(p => {
+    p.classList.toggle('selected', p.dataset.tone === selectedTone);
+  });
+}
+
+function renderField(f) {
+  const req = f.required ? '<span>*</span>' : '';
+  if (f.type === 'input') return `
+    <div class="field-group">
+      <label class="field-label">${f.label}${req}</label>
+      <input class="field-input" id="field_${f.id}" placeholder="${f.placeholder || ''}" />
+    </div>`;
+
+  if (f.type === 'textarea') return `
+    <div class="field-group">
+      <label class="field-label">${f.label}${req}</label>
+      <textarea class="field-textarea" id="field_${f.id}" placeholder="${f.placeholder || ''}"></textarea>
+    </div>`;
+
+  if (f.type === 'select') return `
+    <div class="field-group">
+      <label class="field-label">${f.label}</label>
+      <select class="field-input field-select" id="field_${f.id}">
+        ${f.options.map(o => `<option>${o}</option>`).join('')}
+      </select>
+    </div>`;
+
+  if (f.type === 'tone') return `
+    <div class="field-group">
+      <label class="field-label">${f.label}</label>
+      <div class="tone-grid">
+        ${TONES.map(t => `
+          <div class="tone-pill${t === selectedTone ? ' selected' : ''}" data-tone="${t}"
+               onclick="selectTone(this,'${t}')">${t}</div>
+        `).join('')}
+      </div>
+    </div>`;
+
+  return '';
+}
+
+function selectTone(el, tone) {
+  selectedTone = tone;
+  document.querySelectorAll('.tone-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ── Collect form values ────────────────────────────────────────────────────────
+function collectFields() {
+  const def = FORMS[state.currentType];
+  const fields = { tone: selectedTone };
+  for (const f of def.fields) {
+    if (f.type === 'tone') continue;
+    const el = document.getElementById(`field_${f.id}`);
+    if (el) fields[f.id] = el.value.trim();
+  }
+  return fields;
+}
+
+// ── Generate ───────────────────────────────────────────────────────────────────
+async function generate() {
+  if (state.generating) return;
+
+  const fields = collectFields();
+  const required = FORMS[state.currentType].fields.filter(f => f.required);
+  for (const rf of required) {
+    if (!fields[rf.id]) {
+      toast(`Please fill in "${rf.label}"`, 'error');
+      document.getElementById(`field_${rf.id}`)?.focus();
+      return;
+    }
+  }
+
+  state.generating = true;
+  setLoading(true);
+  const t0 = Date.now();
+
+  try {
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contentType: state.currentType,
+        fields,
+        provider: state.currentProvider,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Generation failed');
+
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+    state.currentResult = data.result;
+
+    renderOutput(data.result);
+    updateStats(data.result, data.provider, elapsed);
+    addToHistory(state.currentType, fields, data.result);
+    toast('Content generated successfully!', 'success');
+  } catch (err) {
+    showError(err.message);
+    toast(err.message, 'error');
+  } finally {
+    state.generating = false;
+    setLoading(false);
+  }
+}
+
+function setLoading(on) {
+  const btn = document.getElementById('genBtn');
+  const spinner = document.getElementById('btnSpinner');
+  const txt = document.getElementById('btnText');
+  btn.disabled = on;
+  spinner.style.display = on ? 'block' : 'none';
+  txt.textContent = on ? 'Generating...' : '✦ Generate Content';
+
+  if (on) {
+    document.getElementById('outputBody').innerHTML = `
+      <div class="loading-dots">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>`;
+    document.getElementById('copyBtn').style.display = 'none';
+    document.getElementById('dlBtn').style.display = 'none';
+    document.getElementById('statsBar').style.display = 'none';
+  }
+}
+
+// ── Render output ──────────────────────────────────────────────────────────────
+function renderOutput(result) {
+  const body = document.getElementById('outputBody');
+
+  if (result.type === 'json') {
+    body.innerHTML = renderSEOOutput(result.data);
+  } else {
+    body.innerHTML = `<div class="gen-text">${escapeHtml(result.data)}</div>`;
+  }
+
+  document.getElementById('copyBtn').style.display = 'flex';
+  document.getElementById('dlBtn').style.display = 'flex';
+}
+
+function renderSEOOutput(data) {
+  const fields = [
+    { key: 'meta_title', label: 'Meta Title', highlight: true },
+    { key: 'meta_description', label: 'Meta Description', highlight: true },
+    { key: 'og_title', label: 'OG Title' },
+    { key: 'og_description', label: 'OG Description' },
+    { key: 'twitter_title', label: 'Twitter Title' },
+    { key: 'twitter_description', label: 'Twitter Description' },
+    { key: 'focus_keyword', label: 'Focus Keyword' },
+    { key: 'slug', label: 'URL Slug' },
+    { key: 'schema_type', label: 'Schema Type' },
+  ];
+
+  let html = '<div class="seo-grid">';
+
+  for (const f of fields) {
+    if (!data[f.key]) continue;
+    const cls = f.highlight ? 'seo-field highlight' : 'seo-field';
+    html += `<div class="${cls}">
+      <div class="seo-field-label">${f.label}</div>
+      <div class="seo-field-value">${escapeHtml(data[f.key])}</div>
+    </div>`;
+  }
+
+  if (data.secondary_keywords?.length) {
+    html += `<div class="seo-field">
+      <div class="seo-field-label">Secondary Keywords</div>
+      <div class="seo-chips">${data.secondary_keywords.map(k => `<span class="seo-chip">${escapeHtml(k)}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function showError(msg) {
+  document.getElementById('outputBody').innerHTML = `
+    <div style="color:var(--accent3);padding:20px;background:rgba(255,107,107,0.08);border-radius:10px;border:1px solid rgba(255,107,107,0.2)">
+      <div style="font-weight:600;margin-bottom:6px">⚠ Generation Error</div>
+      <div style="font-size:13px;opacity:0.8">${escapeHtml(msg)}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:10px">
+        Check your API key and provider settings in the .env file.
+      </div>
+    </div>`;
+}
+
+function resetOutput() {
+  document.getElementById('outputBody').innerHTML = `
+    <div class="output-placeholder">
+      <div class="placeholder-icon">✦</div>
+      <div class="placeholder-text">Fill in the form and click Generate to create AI-powered content</div>
+    </div>`;
+  document.getElementById('copyBtn').style.display = 'none';
+  document.getElementById('dlBtn').style.display = 'none';
+  document.getElementById('statsBar').style.display = 'none';
+  state.currentResult = null;
+}
+
+function updateStats(result, provider, time) {
+  const text = result.type === 'json' ? JSON.stringify(result.data) : result.data;
+  const words = text.trim().split(/\s+/).length;
+  document.getElementById('statWords').textContent = words.toLocaleString();
+  document.getElementById('statChars').textContent = text.length.toLocaleString();
+  document.getElementById('statProvider').textContent = provider;
+  document.getElementById('statTime').textContent = `${time}s`;
+  document.getElementById('statsBar').style.display = 'flex';
+}
+
+// ── History ────────────────────────────────────────────────────────────────────
+function addToHistory(type, fields, result) {
+  const entry = {
+    id: Date.now(),
+    type,
+    fields,
+    result,
+    time: new Date().toLocaleTimeString(),
+    icon: FORMS[type].icon,
+    label: FORMS[type].title,
+  };
+  state.history.unshift(entry);
+
+  document.getElementById('historyCount').textContent = state.history.length;
+
+  const list = document.getElementById('historyList');
+  const preview = result.type === 'text'
+    ? result.data.slice(0, 100) + '...'
+    : 'SEO Meta: ' + (result.data.meta_title || '');
+
+  const item = document.createElement('div');
+  item.className = 'history-item';
+  item.innerHTML = `
+    <div class="history-item-header">
+      <div class="history-type">${entry.icon} ${entry.label}</div>
+      <div class="history-time">${entry.time}</div>
+    </div>
+    <div class="history-preview">${escapeHtml(preview)}</div>`;
+  item.onclick = () => {
+    state.currentType = type;
+    state.currentResult = result;
+    selectType(type);
+    renderOutput(result);
+    updateStats(result, state.currentProvider, '—');
+    showPanel('generate');
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  };
+
+  if (list.querySelector('div[style]')) list.innerHTML = '';
+  list.prepend(item);
+}
+
+// ── Actions ────────────────────────────────────────────────────────────────────
+function copyContent() {
+  if (!state.currentResult) return;
+  const text = state.currentResult.type === 'json'
+    ? JSON.stringify(state.currentResult.data, null, 2)
+    : state.currentResult.data;
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.classList.add('success');
+    btn.innerHTML = '✓ Copied!';
+    setTimeout(() => {
+      btn.classList.remove('success');
+      btn.innerHTML = '📋 Copy';
+    }, 2000);
+    toast('Copied to clipboard!', 'success');
+  });
+}
+
+function downloadContent() {
+  if (!state.currentResult) return;
+  const type = state.currentType;
+  const isJson = state.currentResult.type === 'json';
+  const content = isJson
+    ? JSON.stringify(state.currentResult.data, null, 2)
+    : state.currentResult.data;
+  const ext = isJson ? 'json' : 'txt';
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${type}-${Date.now()}.${ext}`;
+  a.click();
+  toast('File downloaded!', 'success');
+}
+
+// ── Provider ───────────────────────────────────────────────────────────────────
+function updateProvider(val) {
+  state.currentProvider = val;
+  document.getElementById('currentProviderBadge').textContent = val;
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toastIcon').textContent = type === 'success' ? '✓' : '⚠';
+  el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────────
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
