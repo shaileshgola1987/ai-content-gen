@@ -2,14 +2,22 @@
   "name": "ai-content-gen",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shaileshgola1987/ai-content-gen.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/shaileshgola1987/ai-content-gen/issues"
+  },
+  "homepage": "https://github.com/shaileshgola1987/ai-content-gen#readme",
   "dependencies": {
     "axios": "^1.13.6",
     "cors": "^2.8.6",
